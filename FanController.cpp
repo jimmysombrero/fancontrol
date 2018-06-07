@@ -91,7 +91,7 @@ int FanController::fanCurve(double temp) {
     } else if(temp >= this->lowTemp && temp < this->midTemp) {
         speed = setFanSpeed(MIN_SPEED);
     } else if(temp >= this->midTemp && temp < this->highTemp) {
-        halfSpeed = (int) std::round(MAX_SPEED/2);
+        halfSpeed = (int) std::round((MAX_SPEED -  MIN_SPEED)/2 + MIN_SPEED);
         speed = setFanSpeed(halfSpeed);
     } else if(temp >= this->highTemp) {
         speed = setFanSpeed(MAX_SPEED);

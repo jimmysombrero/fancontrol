@@ -33,7 +33,7 @@ void set_signal_handler() {
 }
 
 void get_out(FanController* controller) {
-    std::cout << controller->stopFan();
+    controller->stopFan();
     delete(controller);
     exit(0);
 }
