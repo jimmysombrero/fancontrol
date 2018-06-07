@@ -1,7 +1,7 @@
-#include "Fancontroller.h"
-#include <wiringPi.h>
-#include <iostream>
-#include <stdio.h>
+#include "FanController.h"
+#include<wiringPi.h>
+#include<iostream>
+#include<stdio.h>
 #include<string>
 #include<sys/types.h>
 #include<unistd.h>
@@ -12,10 +12,13 @@
 #define MAX_SPEED 1023
 #define MIN_SPEED 750
 
-FanController::Fancontroller(int pin) {
+FanController::FanController(int pin, double low, double mid, double high) {
     this->pin = pin;
     this->mode = mode;    
     this->fanRunning = false;
+    this->lowTemp = low;
+    this->midTemp = mid;
+    this->highTemp = high;
 
     setupGpio(pin);
 }
@@ -61,17 +64,16 @@ std::string FanController::readTemp() {
 }
 
 //recommend that low <= ambient that way the fan isn't constantly starting and stopping
-double FanController::controlFan(double low, double mid, double high) {
-    std::string rawTemp;
+double FanController::controlFan() {
     double temp;
-    int halfSpeed;
+    std::string rawTemp;
 
     rawTemp = readTemp();
     temp = processRawTemp(rawTemp);
     
     //attempt to start the fan if it isn't already going and the temp is too high
     //then wait for the fan to spin up before adjusting the speed
-    if(temp >= low && !this->fanRunning) {
+    if(temp >= this->lowTemp && !this->fanRunning) {
         startFan();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
@@ -84,23 +86,25 @@ double FanController::controlFan(double low, double mid, double high) {
 int FanController::fanCurve(double temp) {
     int halfSpeed, speed = 0;
 
-    if(temp >= low && temp < mid) {
-        speed = setfanspeed(min_speed);
-    } else if(temp >= mid && temp < high) {{
+    if(temp < this->lowTemp) {
+        stopFan();
+    } else if(temp >= this->lowTemp && temp < this->midTemp) {
+        speed = setFanSpeed(MIN_SPEED);
+    } else if(temp >= this->midTemp && temp < this->highTemp) {
         halfSpeed = (int) std::round(MAX_SPEED/2);
-        speed = setfanspeed(halfspeed);
-    } else if(temp >= high) {
-        speed = setfanspeed(max_speed);
+        speed = setFanSpeed(halfSpeed);
+    } else if(temp >= this->highTemp) {
+        speed = setFanSpeed(MAX_SPEED);
     } else {
-        speed = stopfan();
+        speed = stopFan();
     }
 
     return speed;
 }
 
 void FanController::setupGpio(int pin) {
-    wiringpisetup();
-    pinmode(pin, pwm_output);
+    wiringPiSetup();
+    pinMode(pin, PWM_OUTPUT);
 }
 
 int FanController::stopFan() {
@@ -134,6 +138,6 @@ int FanController::startFan() {
     return MAX_SPEED; 
 }
 
-int speed() {
+int FanController::speed() {
     return this->currentPwmValue;
 }
