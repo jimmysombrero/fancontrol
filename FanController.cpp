@@ -1,3 +1,23 @@
+/*
+    Copyright 2018 James Vaughn
+
+    This software useses the wiringPi GPIO library
+    More information at http://wiringpi.com
+
+    pifancontrol FanControl.cpp
+    FanControll.cpp contains the method definitions for the FanController class
+    The class constructor accepts the GPIO pin number as an int and three temps
+    (low, mid and high) as doubles to define the temperature range. The fan
+    speed will vary from MIN_SPEED to MAX_SPEED depending on the current CPU
+    temp and the provided range. 
+
+    MIN_SPEED is defined at 750 becuase that is the lowest value that would allow
+    the fan blades on my fan to reliably spin. MAX_SPEED is the top PWM value as 
+    defined at http://wiringpi.com/reference/core-functions/
+
+    Pin numbers are defined at https://projects.drogon.net/wiringpi-pin-numbering/
+*/
+
 #include "FanController.h"
 #include<wiringPi.h>
 #include<iostream>
@@ -9,7 +29,7 @@
 #include<chrono>
 #include<thread>
 
-#define MAX_SPEED 1023
+#define MAX_SPEED 1024
 #define MIN_SPEED 750
 
 FanController::FanController(int pin, double low, double mid, double high) {
@@ -23,16 +43,22 @@ FanController::FanController(int pin, double low, double mid, double high) {
     setupGpio(pin);
 }
 
+//parses the temperature value from the string that was returned
+//from the vcgencmd command and converts it to a double
 double FanController::processRawTemp(std::string rawTemp) {
     std::string stemp;
     std::size_t equalspos, tickposition;
     double temp;
     
+    //find the position of the two characters before and after the temp
     equalspos = rawTemp.find("=", 0);
     tickposition = rawTemp.find("'", equalspos);
 
+    //return the substring between those characters
     stemp = rawTemp.substr(equalspos + 1, tickposition - equalspos);
 
+    //try to convert the parsed string into a double
+    //return error code -1 if there is a failure
     try {
         temp = std::stod(stemp);
     } catch (const std::invalid_argument& ia) {
@@ -43,19 +69,27 @@ double FanController::processRawTemp(std::string rawTemp) {
     return temp;
 }
 
+//executes the vcgencmd command to measure the CPU temperature
+//and returns the output as a string
 std::string FanController::readTemp() {
 	char buffer[256];
 	FILE *fp;
     std::string output = "";
 	
 	std::string command = "/opt/vc/bin/vcgencmd measure_temp";
-
+    
+    //open a pipe to the command so that we can read the outpu
 	FILE *pipe = popen(command.c_str(), "r");
 
+    //if the pipe was successfully opened then read it and 
+    //then close the pipe; otherwise log the error and 
+    //return and empty string
     if(pipe != NULL) {
         while(fgets(buffer, sizeof(buffer), pipe) != NULL) {
             output += buffer;
         }
+
+        pclose(pipe);
     } else {
         std::cerr << "There was an error opening the pipe " << errno << std::endl;
     }
@@ -71,7 +105,7 @@ double FanController::controlFan() {
     rawTemp = readTemp();
     temp = processRawTemp(rawTemp);
     
-    //attempt to start the fan if it isn't already going and the temp is too high
+    //attempt to start the fan if it is stopped and the temp is too high
     //then wait for the fan to spin up before adjusting the speed
     if(temp >= this->lowTemp && !this->fanRunning) {
         startFan();
@@ -83,6 +117,8 @@ double FanController::controlFan() {
     return temp;
 }
 
+//adjust the fan speed based on temperature.  The speeds are MIN_SPEED,
+//MAX_SPEED and median(MIN_SPEED, MAX_SPEED)
 int FanController::fanCurve(double temp) {
     int halfSpeed, speed = 0;
 
@@ -102,6 +138,8 @@ int FanController::fanCurve(double temp) {
     return speed;
 }
 
+//sets up the wiringPi library and sets the pinMode
+//both are required per wiringPi documentation
 void FanController::setupGpio(int pin) {
     wiringPiSetup();
     pinMode(pin, PWM_OUTPUT);
@@ -117,6 +155,9 @@ int FanController::stopFan() {
     return 0;
 }
 
+//You can guess what this does, but also it does not do anything
+//if the passed speed value is not between MIN_SPEED and MAX_SPEED
+//or if it's the same speed that the fan is already going
 int FanController::setFanSpeed(int speed) {
     if(speed >= MIN_SPEED && speed <= MAX_SPEED && speed != currentPwmValue) {
         pwmWrite(this->pin, speed);

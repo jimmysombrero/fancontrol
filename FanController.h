@@ -1,3 +1,13 @@
+/*
+    Copyright 2018 James Vaughn
+
+    This software useses the wiringPi GPIO library
+    More information at http://wiringpi.com
+
+    pifancontrol FanControl.h
+    FanControl.h contains the class declaration.
+*/
+
 #include <string>
 
 class FanController {
