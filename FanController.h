@@ -6,6 +6,8 @@
 
     pifancontrol FanControl.h
     FanControl.h contains the class declaration.
+
+    Licensed under the MIT License.
 */
 
 #include <string>

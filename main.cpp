@@ -9,6 +9,8 @@
     every SLEEP_TIME seconds.  A signal handler is set up
     to catch SIGINT so that there is a way to kill the 
     program that will stop the fan and clean up memory.
+
+    Licensed under the MIT License.
 */
 
 #include<string>

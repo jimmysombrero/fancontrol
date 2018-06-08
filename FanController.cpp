@@ -16,6 +16,8 @@
     defined at http://wiringpi.com/reference/core-functions/
 
     Pin numbers are defined at https://projects.drogon.net/wiringpi-pin-numbering/
+
+    Licensed under the MIT License.
 */
 
 #include "FanController.h"
